@@ -68,12 +68,12 @@ interface ISoulBoundMedal is ISoulBound {
 
     /**
      * @dev update medal by index
-     * @param index index of medal
+     * @param medalIndex index of medal
      * @param name new name of medal
      * @param uri new uri of medal
      */
     function updateMedal(
-        uint256 index,
+        uint256 medalIndex,
         string calldata name,
         string calldata uri
     ) external;

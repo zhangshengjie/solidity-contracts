@@ -6,15 +6,31 @@ import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Base64.sol";
 import "./ISoulBoundBridge.sol";
 
+interface IOwnable {
+    /**
+     * @dev Returns the address of the current owner.
+     */
+    function owner() external view returns (address);
+}
+
 contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
     address[] public storageEnumerableUserArr;
 
     mapping(address => uint256[]) public storageEnumerableUserMap;
+
     mapping(bytes32 => uint8) public userDAOMapping;
+
     mapping(address => uint256) public storageEnumerableDAOMap;
+
     address[] public storageEnumerableDAOArr;
 
     mapping(address => mapping(bytes4 => string)) public storageStrings;
+
+    mapping(address => uint256[]) public userDaoMedalsDaoIndexMap; // key: user address,value:index-1 is the dao in the storageEnumerableDAOArr
+    mapping(bytes32 => uint8[]) public userDaoMedalsMapIndex; // key: user address+ dao address,value:value:user climbed the index of medal
+
+    mapping(address => address[]) public contractOwnerMap; // key:user address,value: dao address array
+    mapping(bytes32 => uint256) public contractOwnerMapIndex; // key: user address+ dao address,value -1 is the index of the contractOwnerMap -> value
 
     constructor() {}
 
@@ -68,6 +84,24 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         _;
     }
 
+    function changeOwner(address _dao)
+        public
+        override
+        onlySoulBoundMedalAddress(_dao)
+    {
+        _changeOwner(_dao);
+    }
+
+    function _changeOwner(address _dao) private {
+        IOwnable ownable = IOwnable(_dao);
+        address owner = ownable.owner();
+        bytes32 key = keccak256(abi.encodePacked(owner, _dao));
+        if (contractOwnerMapIndex[key] == 0) {
+            contractOwnerMap[owner].push(_dao);
+            contractOwnerMapIndex[key] = contractOwnerMap[owner].length;
+        }
+    }
+
     function register(address _address, address _dao) public override {
         if (storageEnumerableDAOMap[_dao] == 0) {
             require(
@@ -82,6 +116,9 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
             );
             storageEnumerableDAOArr.push(_dao);
             storageEnumerableDAOMap[_dao] = storageEnumerableDAOArr.length;
+
+            // register owner
+            _changeOwner(_dao);
         }
         bytes32 userDAOMappingKey = keccak256(abi.encodePacked(_address, _dao));
         if (userDAOMapping[userDAOMappingKey] == 0) {
@@ -95,6 +132,21 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         }
     }
 
+    function medalMint(
+        address _address,
+        address _dao,
+        uint8 _medalIndex
+    ) public override onlySoulBoundMedalAddress(_dao) {
+        bytes32 userDAOMappingKey = keccak256(abi.encodePacked(_address, _dao));
+        uint8[] memory keyIndex = userDaoMedalsMapIndex[userDAOMappingKey];
+        if (keyIndex.length == 0) {
+            userDaoMedalsDaoIndexMap[_address].push(
+                storageEnumerableDAOMap[_dao]
+            );
+        }
+        userDaoMedalsMapIndex[userDAOMappingKey].push(_medalIndex);
+    }
+
     /**
      * @dev list medals
      * @param offset the offset, from 0
@@ -105,14 +157,7 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         address _address,
         uint256 offset,
         uint256 limit
-    )
-        public
-        view
-        override
-        onlySoulBoundMedalAddress(_address)
-        returns (string memory)
-    {
-        ISoulBoundMedal medalContract = ISoulBoundMedal(_address);
+    ) public view onlySoulBoundMedalAddress(_address) returns (string memory) {
         /*
         {"total":1,"medals":[
                 {
@@ -128,6 +173,7 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
             ]
         }
          */
+        ISoulBoundMedal medalContract = ISoulBoundMedal(_address);
         string[] memory _medalnameArr;
         string[] memory _medaluriArr;
         ISoulBoundMedal.MedalPanel[] memory _medalPanel;
@@ -176,7 +222,47 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         return result;
     }
 
-    function countDAO() public view override returns (uint256) {
+    function countCliamRequest(address _dao)
+        public
+        view
+        onlySoulBoundMedalAddress(_dao)
+        returns (uint256)
+    {
+        return _countCliamRequest(_dao);
+    }
+
+    function _countCliamRequest(address _dao) private view returns (uint256) {
+        ISoulBoundMedal medalContract = ISoulBoundMedal(_dao);
+        return medalContract.getCliamRequestSize();
+    }
+
+    function getCliamRequest(address _dao, uint256 _index)
+        public
+        view
+        onlySoulBoundMedalAddress(_dao)
+        returns (ISoulBoundMedal.CliamRequest memory)
+    {
+        return _getCliamRequest(_dao, _index);
+    }
+
+    function _getCliamRequest(address _dao, uint256 _index)
+        private
+        view
+        returns (ISoulBoundMedal.CliamRequest memory)
+    {
+        ISoulBoundMedal medalContract = ISoulBoundMedal(_dao);
+        return _getCliamRequest(medalContract, _index);
+    }
+
+    function _getCliamRequest(ISoulBoundMedal medalContract, uint256 _index)
+        private
+        view
+        returns (ISoulBoundMedal.CliamRequest memory)
+    {
+        return medalContract.getCliamRequest(_index);
+    }
+
+    function countDAO() public view returns (uint256) {
         return storageEnumerableDAOArr.length;
     }
 
@@ -185,7 +271,7 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         uint256 limit,
         uint256 medals_offset,
         uint256 medals_limit // no medals fetched if 0
-    ) public view override returns (string memory) {
+    ) public view returns (string memory) {
         /* 
         {
            "address": [
@@ -257,5 +343,114 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
                     "}"
                 )
             );
+    }
+
+    function userDetail(address _address) public view returns (string memory) {
+        /* 
+{
+    "owner": [
+        "0x1",
+        "0x2"
+    ],
+    "medals": [
+        {
+            "dao": "0x1",
+            "owned": [
+                {
+                    "index": 0,
+                    "name": "base64 string",
+                    "uri": "base64 string",
+                    "request": 0,
+                    "approved": 0,
+                    "rejected": 0,
+                    "genesis": 1539098983
+                }
+            ]
+        }
+    ]
+}
+         */
+        string memory result = '{"owner":[';
+        address[] memory _ownerArr = contractOwnerMap[_address];
+        uint256 _i = 0;
+        for (uint256 i = 0; i < _ownerArr.length; i++) {
+            address _dao = _ownerArr[i];
+            IOwnable ownable = IOwnable(_dao);
+            address owner = ownable.owner();
+            if (owner != _address) {
+                continue;
+            }
+            if (_i > 0) {
+                result = string(abi.encodePacked(result, ","));
+            }
+            result = string(
+                abi.encodePacked(
+                    result,
+                    '"',
+                    Strings.toHexString(uint256(uint160(_dao))),
+                    '"'
+                )
+            );
+            _i++;
+        }
+        result = string(abi.encodePacked(result, '],"medals":['));
+        uint256[] memory userDaoMedals = userDaoMedalsDaoIndexMap[_address];
+        for (uint256 i = 0; i < userDaoMedals.length; i++) {
+            if (i > 0) {
+                result = string(abi.encodePacked(result, ","));
+            }
+            address _dao = storageEnumerableDAOArr[userDaoMedals[i]-1];
+            result = string(
+                abi.encodePacked(
+                    result,
+                    '{"dao":"',
+                    Strings.toHexString(uint256(uint160(_dao))),
+                    '","owned":['
+                )
+            );
+            ISoulBoundMedal medalContract = ISoulBoundMedal(_dao);
+            string[] memory _medalnameArr;
+            string[] memory _medaluriArr;
+            ISoulBoundMedal.MedalPanel[] memory _medalPanel;
+            (_medalnameArr, _medaluriArr, _medalPanel) = medalContract
+                .getMedals();
+            bytes32 userDAOMappingKey = keccak256(
+                abi.encodePacked(_address, _dao)
+            );
+            uint8[] memory ownedMedalsIndex = userDaoMedalsMapIndex[
+                userDAOMappingKey
+            ];
+            for (uint256 j = 0; j < ownedMedalsIndex.length; j++) {
+                if (j > 0) {
+                    result = string(abi.encodePacked(result, ","));
+                }
+                uint8 medalIndex = ownedMedalsIndex[j];
+
+                result = string(
+                    abi.encodePacked(
+                        result,
+                        '{"index":',
+                        Strings.toString(medalIndex),
+                        ',"name":"',
+                        Base64.encode(bytes(_medalnameArr[medalIndex])),
+                        '","uri":"',
+                        Base64.encode(bytes(_medaluriArr[medalIndex])),
+                        '","request":',
+                        Strings.toString(_medalPanel[medalIndex]._request),
+                        ',"approved":',
+                        Strings.toString(_medalPanel[medalIndex]._approved),
+                        ',"rejected":',
+                        Strings.toString(_medalPanel[medalIndex]._rejected),
+                        ',"genesis":',
+                        Strings.toString(_medalPanel[medalIndex]._genesis),
+                        "}"
+                    )
+                );
+            }
+            result = string(abi.encodePacked(result, "]}"));
+        }
+        result = string(abi.encodePacked(result, "]}"));
+
+        return result;
     }
 }

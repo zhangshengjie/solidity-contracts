@@ -27,7 +27,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
      */
     mapping(bytes32 => uint8) private _cliamStatus;
 
-    CliamRequest[] private _cliamRequestList;
+    ISoulBoundMedal.CliamRequest[] private _cliamRequestList;
 
     ISoulBoundMedal.MedalPanel[] private _medalPanel;
 
@@ -71,6 +71,12 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         _;
     }
 
+    function transferOwnership(address newOwner) public override onlyOwner {
+        super.transferOwnership(newOwner);
+        ISoulBoundBridge soulBoundBridge = ISoulBoundBridge(_daoBridge);
+        soulBoundBridge.changeOwner(address(this));
+    }
+
     /**
      * use global data storage to save the data
      */
@@ -86,19 +92,6 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     /**
      * use global data storage to save the data
      */
-    function getString(bytes4 k)
-        public
-        view
-        DataStorageCheck
-        returns (string memory)
-    {
-        IDataStorage dataStorageInstance = IDataStorage(_daoBridge);
-        return dataStorageInstance.getString(address(this), k);
-    }
-
-    /**
-     * use global data storage to save the data
-     */
     function saveStrings(bytes4[] calldata k, string[] calldata v)
         public
         onlyOwner
@@ -106,19 +99,6 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     {
         IDataStorage dataStorageInstance = IDataStorage(_daoBridge);
         return dataStorageInstance.saveStrings(k, v);
-    }
-
-    /**
-     * use global data storage to save the data
-     */
-    function getStrings(bytes4[] calldata k)
-        public
-        view
-        DataStorageCheck
-        returns (string[] memory)
-    {
-        IDataStorage dataStorageInstance = IDataStorage(_daoBridge);
-        return dataStorageInstance.getStrings(address(this), k);
     }
 
     /**
@@ -187,7 +167,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         public
         view
         override
-        returns (CliamRequest memory)
+        returns (ISoulBoundMedal.CliamRequest memory)
     {
         require(_index < _cliamRequestList.length);
         return _cliamRequestList[_index];
@@ -195,18 +175,18 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
 
     /**
      * @dev update medal by index
-     * @param index index of medal
+     * @param medalIndex index of medal
      * @param name new name of medal
      * @param uri new uri of medal
      */
     function updateMedal(
-        uint256 index,
+        uint256 medalIndex,
         string calldata name,
         string calldata uri
     ) public override onlyOwner {
-        require(index < _medalnameArr.length);
-        _medalnameArr[index] = name;
-        _medaluriArr[index] = uri;
+        require(medalIndex < _medalnameArr.length);
+        _medalnameArr[medalIndex] = name;
+        _medaluriArr[medalIndex] = uri;
     }
 
     /**
@@ -216,7 +196,9 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
      */
     function cliamApproved(uint256 cliamId) public override onlyOwner {
         require(cliamId < _cliamRequestList.length);
-        CliamRequest memory request = _cliamRequestList[cliamId];
+        ISoulBoundMedal.CliamRequest memory request = _cliamRequestList[
+            cliamId
+        ];
         bytes32 k = keccak256(
             abi.encodePacked(request._address, request._medalIndex)
         );
@@ -231,6 +213,13 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         uint256 tokenId = _tokenIdCounter.current();
         _medalMap[tokenId] = request._medalIndex;
         _mint(request._address, tokenId);
+
+        ISoulBoundBridge soulBoundBridge = ISoulBoundBridge(_daoBridge);
+        soulBoundBridge.medalMint(
+            request._address,
+            address(this),
+            request._medalIndex
+        );
     }
 
     /**
@@ -239,7 +228,9 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
      */
     function cliamRejected(uint256 cliamId) public override onlyOwner {
         require(cliamId < _cliamRequestList.length);
-        CliamRequest memory request = _cliamRequestList[cliamId];
+        ISoulBoundMedal.CliamRequest memory request = _cliamRequestList[
+            cliamId
+        ];
         bytes32 k = keccak256(
             abi.encodePacked(request._address, request._medalIndex)
         );
@@ -263,7 +254,12 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         if (cliamStatus != 2) {
             _cliamStatus[k] = 1;
             _cliamRequestList.push(
-                CliamRequest(msg.sender, medalIndex, block.timestamp, 1)
+                ISoulBoundMedal.CliamRequest(
+                    msg.sender,
+                    medalIndex,
+                    block.timestamp,
+                    1
+                )
             );
             unchecked {
                 _medalPanel[medalIndex]._request++;
@@ -301,7 +297,9 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
                 "base64://",
                 Base64.encode(
                     abi.encodePacked(
-                        '{"name":"',
+                        '{"owner":"',
+                        Strings.toHexString(uint256(uint160(ownerOf(tokenId)))),
+                        '","name":"',
                         Base64.encode(bytes(medalName)),
                         '","image":"',
                         Base64.encode(bytes(medalURI)),
