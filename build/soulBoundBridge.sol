@@ -1306,9 +1306,14 @@ library Base64 {
 // _
 interface ISoulBoundBridge {
     function register(address _address, address _dao) external;
-    function changeOwner( address _dao) external;
-    function medalMint(address _address, address _dao,uint256 _medalIndex) external;
-    
+
+    function onOwnerChage(address _dao) external;
+
+    function medalMint(
+        address _address,
+        address _dao,
+        uint256 _medalIndex
+    ) external;
 }
 
 // _
@@ -1353,10 +1358,20 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
 
     // region functional
 
+    /**
+     * @dev save a string to the storage
+     * @param k key
+     */
     function saveString(bytes4 k, string calldata v) public override {
         storageStrings[msg.sender][k] = v;
     }
 
+    /**
+     * @dev get a string from the storage
+     * @param a address
+     * @param k key
+     * @return string memory value
+     */
     function getString(address a, bytes4 k)
         public
         view
@@ -1366,6 +1381,11 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         return storageStrings[a][k];
     }
 
+    /**
+     * @dev save multiple string to the storage
+     * @param k key array
+     * @param v value array
+     */
     function saveStrings(bytes4[] calldata k, string[] calldata v)
         public
         override
@@ -1375,6 +1395,12 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         }
     }
 
+    /**
+     * @dev get multiple string from the storage
+     * @param a address
+     * @param k key array
+     * @return string[] memory value array
+     */
     function getStrings(address a, bytes4[] calldata k)
         public
         view
@@ -1388,6 +1414,12 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         return result;
     }
 
+    /**
+     * @dev get multiple address & multiple string from the storage
+     * @param a key
+     * @param k value
+     * @return string[][] memory value array
+     */
     function getStrings(address[] calldata a, bytes4[] calldata k)
         public
         view
@@ -1415,7 +1447,11 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         _;
     }
 
-    function changeOwner(address _dao)
+    /**
+     * @dev  call on DAO owner change
+     * @param _dao address
+     */
+    function onOwnerChage(address _dao)
         public
         override
         onlySoulBoundMedalAddress(_dao)
@@ -1423,6 +1459,11 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         _changeOwner(_dao);
     }
 
+    /**
+     * @dev  get the owner of the contract
+     * @param _dao address
+     * @return address
+     */
     function getOwner(address _dao) private view returns (address) {
         IOwnable ownable = IOwnable(_dao);
         try ownable.owner() returns (address _owner) {
@@ -1431,6 +1472,11 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         return address(0);
     }
 
+    /**
+     * @dev  get the name of the contract
+     * @param _dao address
+     * @return string
+     */
     function getName(address _dao) private view returns (string memory) {
         IOwnable ownable = IOwnable(_dao);
         try ownable.name() returns (string memory _name) {
@@ -1448,6 +1494,11 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         }
     }
 
+    /**
+     * @dev  register a DAO contract
+     * @param _address user address
+     * @param _dao address  DAO contract address
+     */
     function register(address _address, address _dao) public override {
         if (storageEnumerableDAOMap[_dao] == 0) {
             require(
@@ -1478,6 +1529,12 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         }
     }
 
+    /**
+     * @dev  DAO contract call this function on medal minted
+     * @param _address user address
+     * @param _dao address  DAO contract address
+     * @param _medalIndex uint256   medal index
+     */
     function medalMint(
         address _address,
         address _dao,
@@ -1497,10 +1554,22 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
 
     // region DAO
 
+    /**
+     * @dev  count DAO
+     * @return uint256 DAO count
+     */
     function countDAO() public view returns (uint256) {
         return storageEnumerableDAOArr.length;
     }
 
+    /**
+     * @dev list DAO
+     * @param offset uint256 query offset
+     * @param limit uint256 query limit
+     * @param medals_offset uint256 medal offset
+     * @param medals_limit uint256 medal limit,no medals fetched if 0
+     * @return string memory  json string
+     */
     function listDAO(
         uint256 offset,
         uint256 limit,
@@ -1584,6 +1653,11 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
 
     // region CliamRequest
 
+    /**
+     * @dev  count CliamRequest by DAO
+     * @param _dao address DAO contract address
+     * @return uint256 CliamRequest count
+     */
     function countCliamRequest(address _dao) public view returns (uint256) {
         ISoulBoundMedal soulBoundMedal = ISoulBoundMedal(_dao);
         try soulBoundMedal.getCliamRequestSize() returns (uint256 _size) {
@@ -1593,6 +1667,11 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         }
     }
 
+    /**
+     * @dev  count approved CliamRequest by DAO
+     * @param _dao address DAO contract address
+     * @return string memory  json string
+     */
     function countCliamRequestApproved(address _dao)
         public
         view
@@ -1608,6 +1687,11 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         return count;
     }
 
+    /**
+     * @dev  count Approved CliamRequest by DAO and medal index
+     * @param _dao address DAO contract address
+     * @return string memory  json string
+     */
     function countCliamRequestApproved(address _dao, uint256 _madalIndex)
         public
         view
@@ -1622,8 +1706,14 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         return 0;
     }
 
+    /**
+     * @dev get CliamRequest by DAO
+     * @param medalContract  address  medal contract address instance
+     * @param _index  uint256  CliamRequest index
+     * @return string memory  json string
+     */
     function getCliamRequest(ISoulBoundMedal medalContract, uint256 _index)
-        public
+        private
         view
         returns (string memory)
     {
@@ -1659,6 +1749,13 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         return "{}";
     }
 
+    /**
+     * @dev get CliamRequest list by DAO
+     * @param _dao address DAO contract address
+     * @param _offset uint256 query offset
+     * @param _limit uint256 query limit
+     * @return string memory  json string
+     */
     function getCliamRequest(
         address _dao,
         uint256 _offset,
@@ -1681,6 +1778,13 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         return string(abi.encodePacked(result, "]"));
     }
 
+    /**
+     * @dev get CliamRequest Approved list by DAO
+     * @param _dao address DAO contract address
+     * @param _offset uint256 query offset
+     * @param _limit uint256 query limit
+     * @return string memory  json string
+     */
     function getCliamRequestApproved(
         address _dao,
         uint256 _offset, // offset of each medal
@@ -1727,6 +1831,15 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
         return string(abi.encodePacked(result, "]"));
     }
 
+
+    /**
+     * @dev get CliamRequest Approved list by DAO and medal index
+     * @param _dao address DAO contract address
+     * @param _offset uint256 query offset
+     * @param _limit uint256 query limit
+     * @param _medalIndex uint256 medal index
+     * @return string memory  json string
+     */
     function getCliamRequestApproved(
         address _dao,
         uint256 _offset,
@@ -1755,7 +1868,7 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
     // region medals
 
     /**
-     * @dev list medals
+     * @dev list medals of DAO
      * @param offset the offset, from 0
      * @param limit the limit, minimum 1
      * @return string json string of query result
@@ -1855,6 +1968,11 @@ contract SoulBoundBridge is IDataStorage, ISoulBoundBridge {
 
     // region user
 
+    /**
+     * @dev get user info
+     * @param _address address user address
+     * @return string json string of user info
+     */
     function userDetail(address _address) public view returns (string memory) {
         /* 
 {

@@ -1347,9 +1347,14 @@ interface IDataStorage {
 // _
 interface ISoulBoundBridge {
     function register(address _address, address _dao) external;
-    function changeOwner( address _dao) external;
-    function medalMint(address _address, address _dao,uint256 _medalIndex) external;
-    
+
+    function onOwnerChage(address _dao) external;
+
+    function medalMint(
+        address _address,
+        address _dao,
+        uint256 _medalIndex
+    ) external;
 }
 
 // _
@@ -1377,11 +1382,11 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     ISoulBoundMedal.MedalPanel[] private _medalPanel;
 
     constructor(
-        string memory _name,
-        string memory _symbol,
-        string[] memory _medalname,
-        string[] memory _medaluri,
-        address _daoBridgeAddress
+        string memory _name, // NFT Collection Name
+        string memory _symbol, // NFT Collection Symbol
+        string[] memory _medalname, // Medal Name Arrary , length must be equal to _medaluri
+        string[] memory _medaluri, // Medal Image Url Arrary , length must be equal to _medalname
+        address _daoBridgeAddress // DAO Bridge Address, used to get cliam status
     ) ERC721(_name, _symbol) {
         _medalnameArr = _medalname;
         _medaluriArr = _medaluri;
@@ -1418,12 +1423,15 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
 
     function transferOwnership(address newOwner) public override onlyOwner {
         super.transferOwnership(newOwner);
+
         ISoulBoundBridge soulBoundBridge = ISoulBoundBridge(_daoBridge);
-        soulBoundBridge.changeOwner(address(this));
+        try soulBoundBridge.onOwnerChage(address(this)) {} catch {}
     }
 
     /**
-     * use global data storage to save the data
+     * @dev save string to storage
+     * @param k key
+     * @param v value
      */
     function saveString(bytes4 k, string calldata v)
         public
@@ -1435,7 +1443,9 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     }
 
     /**
-     * use global data storage to save the data
+     * @dev save multiple string to storage
+     * @param k key arrary
+     * @param v value arrary
      */
     function saveStrings(bytes4[] calldata k, string[] calldata v)
         public
@@ -1449,7 +1459,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     /**
      * @dev Add medals to current DAO
      * @param medalsname array of medal name
-     * @param medalsuri array of medal uri
+     * @param medalsuri array of medal image url
      */
     function addMedals(
         string[] calldata medalsname,
@@ -1465,7 +1475,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
 
     /**
      * @dev get medals count
-     * @return uint256
+     * @return uint256 the count of medals
      */
     function countMedals() public view override returns (uint256) {
         return _medalnameArr.length;
@@ -1490,6 +1500,8 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
 
     /**
      * @dev get medalIndex by tokenid
+     * @param tokenid token id
+     * @return uint256 the medal index
      */
     function getMedalIndexByTokenid(uint256 tokenid)
         public
@@ -1502,6 +1514,8 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
 
     /**
      * @dev get cliam status by key
+     * @param key key, bytes32 : request user address + medalIndex
+     * @return uint8 the cliam status, 0: rejected , 1: pending, 2: approved
      */
     function getCliamStatusByBytes32Key(bytes32 key)
         public
@@ -1512,10 +1526,18 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         return _cliamStatus[key];
     }
 
+    /**
+     * @dev get size of cliam request list
+     * @return uint256 the size of cliam request list
+     */
     function getCliamRequestSize() public view override returns (uint256) {
         return _cliamRequestList.length;
     }
 
+    /**
+     * @dev get cliam request item by index
+     * @return ISoulBoundMedal.CliamRequest
+     */
     function getCliamRequest(uint256 _index)
         public
         view
@@ -1527,9 +1549,9 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     }
 
     /**
-     * @dev get Cliam Request Approved count
+     * @dev get the size of cliam request approved list by medal index
      * @param _medalIndex medal index
-     * @return uint256
+     * @return uint256 the size of cliam request approved list
      */
     function countCliamRequestApproved(uint256 _medalIndex)
         public
@@ -1541,7 +1563,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     }
 
     /**
-     * @dev get Cliam Request Approved index by medal index
+     * @dev get Approved CliamRequest list index arrary by medal index
      * @param _medalIndex medal index
      * @return uint256[] CliamRequest index arrary of Cliam Request Approved
      */
@@ -1555,10 +1577,10 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     }
 
     /**
-     * @dev update medal by index
+     * @dev update medal by medal index
      * @param medalIndex index of medal
      * @param name new name of medal
-     * @param uri new uri of medal
+     * @param uri new image url of medal
      */
     function updateMedal(
         uint256 medalIndex,
@@ -1572,7 +1594,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
 
     /**
      * @dev  Approved cliam
-     * @param cliamId the index of the cliam id
+     * @param cliamId the index of the cliam request id
      * Emits a {Transfer} event.
      */
     function cliamApproved(uint256 cliamId) public override onlyOwner {
@@ -1608,7 +1630,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
 
     /**
      * @dev  Rejected cliam
-     * @param cliamId the index of the cliam id
+     * @param cliamId the index of the cliam request id
      */
     function cliamRejected(uint256 cliamId) public override onlyOwner {
         require(cliamId < _cliamRequestList.length);
@@ -1659,8 +1681,9 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     }
 
     /**
-     * @dev  RFC 3986 compliant URL:base64://{json encoded with base64}
-     * json {"name":"base64(medal name)","image":"base64(medal uri)"}
+     * @dev  RFC 3986 compliant URL:base64://{json encoded with base64} ,json {"name":"base64(medal name)","image":"base64(medal uri)"}
+     * @param tokenId  tokenid
+     * @return string  the base64 uri of the Token
      */
     function tokenURI(uint256 tokenId)
         public

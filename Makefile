@@ -14,8 +14,8 @@ clean:
 .PHONY: build
 build:
 	@echo "Building release version $(VERSION)"
-	@node ./node_modules/sol-merger/dist/bin/sol-merger.js "./daoNFT/soulBoundBridge.sol" ./build
-	@node ./node_modules/sol-merger/dist/bin/sol-merger.js "./daoNFT/soulBoundMedal.sol" ./build
+	@node ./node_modules/sol-merger/dist/bin/sol-merger.js "./contracts/soulBoundBridge.sol" ./build
+	@node ./node_modules/sol-merger/dist/bin/sol-merger.js "./contracts/soulBoundMedal.sol" ./build
 
 .PHONY: cleanup
 cleanup:
