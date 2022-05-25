@@ -1,7 +1,7 @@
 # Decentralized Application interface
 
 soulBoundMedal.sol 为SoulBound DAO合约
-soulBoundBridge.sol 为 DAO 之间的桥接工具
+soulBoundBridge.sol 为 DAO 之间的桥接工具 , 当前桥接工具部署地址为：https://mumbai.polygonscan.com/address/0xdc2a0e0dadc62b6db22382cdfe4b5597d6b8652e#code
 
 # soulBoundMedal.sol
 
