@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.4; 
+pragma solidity ^0.8.4;
 
 import "./ISoulBound.sol";
- 
-
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 interface ISoulBoundMedal is ISoulBound {
     /**
@@ -37,12 +36,18 @@ interface ISoulBoundMedal is ISoulBound {
         );
 
     /**
+     * @dev get medals count
+     * @return uint256
+     */
+    function countMedals() external view returns (uint256);
+
+    /**
      * @dev get medalIndex by tokenid
      */
     function getMedalIndexByTokenid(uint256 tokenid)
         external
         view
-        returns (uint8);
+        returns (uint256);
 
     /**
      * @dev get cliam status by key
@@ -56,7 +61,7 @@ interface ISoulBoundMedal is ISoulBound {
 
     struct CliamRequest {
         address _address; // request address
-        uint8 _medalIndex; // medal index
+        uint256 _medalIndex; // medal index
         uint256 _timestamp; // timestamp
         uint8 _status; // status of the cliam,  0: rejected , 1: pending, 2: approved
     }
@@ -65,6 +70,26 @@ interface ISoulBoundMedal is ISoulBound {
         external
         view
         returns (CliamRequest memory);
+
+    /**
+     * @dev get Cliam Request Approved count
+     * @param _medalIndex medal index
+     * @return uint256
+     */
+    function countCliamRequestApproved(uint256 _medalIndex)
+        external
+        view
+        returns (uint256);
+
+    /**
+     * @dev get Cliam Request Approved index by medal index
+     * @param _medalIndex medal index
+     * @return uint256[] CliamRequest index arrary of Cliam Request Approved
+     */
+    function listCliamRequestApproved(uint256 _medalIndex)
+        external
+        view
+        returns (uint256[] memory);
 
     /**
      * @dev update medal by index
@@ -95,5 +120,5 @@ interface ISoulBoundMedal is ISoulBound {
      * @dev Users apply for mint medal
      * @param medalIndex the index of the medal
      */
-    function cliamRequest(uint8 medalIndex) external;
+    function cliamRequest(uint256 medalIndex) external;
 }

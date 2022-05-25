@@ -4,6 +4,6 @@ pragma solidity ^0.8.4;
 interface ISoulBoundBridge {
     function register(address _address, address _dao) external;
     function changeOwner( address _dao) external;
-    function medalMint(address _address, address _dao,uint8 _medalIndex) external;
+    function medalMint(address _address, address _dao,uint256 _medalIndex) external;
     
 }

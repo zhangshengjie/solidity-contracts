@@ -1,17 +1,13 @@
-<!--
- * @Description: 
- * @Version: 1.0
- * @Autor: z.cejay@gmail.com
- * @Date: 2022-05-24 22:36:16
- * @LastEditors: cejay
- * @LastEditTime: 2022-05-25 00:04:11
--->
+# Decentralized Application interface
 soulBoundMedal.sol 为DAO合约
 soulBoundBridge.sol 为桥接工具
 
+当前 soulBoundBridge.sol 的部署地址为：https://mumbai.polygonscan.com/address/0xabc1f5943425d1a1d14f1985cc351d00b655c6f2#code
+当前 soulBoundMedal.sol 的部署地址为：https://mumbai.polygonscan.com/address/0xc49f649b69494205f9765757ee7260284d91ff3d#code
+
 - 部署soulBoundMedal.sol时需要提供以下构造参数：
-string memory _name,  NFT名字
-string memory _symbol, NFT代号
+string memory _name,  NFT名字 部署后无法修改
+string memory _symbol, NFT代号 部署后无法修改
 string[] memory _medalname, 勋章名字数组
 string[] memory _medaluri, 勋章图片url数组
 address _daoBridgeAddress 桥接工具地址【固定地址】
@@ -67,6 +63,12 @@ soulBoundBridge -> function getString(address a, bytes4 k)，a为目标地址，
 
 - 批量查询一个地址保存的字符串信息
 soulBoundBridge -> function getStrings(address a, bytes4[] k)，a为目标地址，k为key数组
+
+- 批量查询多个地址的多个保存的字符串
+soulBoundBridge -> function getStrings(address[] calldata a, bytes4[] calldata k) 返回一个二维数组
+
+- 查询一个用户的所有NFT记录
+soulBoundBridge -> function userDetail(address _address) _address为一个用户的地址，返回json
 
 
 

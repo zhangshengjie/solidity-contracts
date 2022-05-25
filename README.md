@@ -1,21 +1,18 @@
-<!--
- * @Description: 
- * @Version: 1.0
- * @Autor: z.cejay@gmail.com
- * @Date: 2022-05-23 21:47:43
- * @LastEditors: cejay
- * @LastEditTime: 2022-05-24 16:33:46
--->
-# contracts
-合约
+# SoulBound NFT Token Contract DEMO
 
-nvm use v14.19.3
+## [`DEV`]
 
-remixd -s ./ --remix-ide https://remix.ethereum.org
+- Requirements
+```shell
+Node >= v14 #nvm use v14.19.3
+remixd
+```
 
-存储：
+```shell
+1. npm install
+2. make all
+3. remixd -s ./ --remix-ide https://remix.ethereum.org
+```
 
-node ./node_modules/sol-merger/dist/bin/sol-merger.js "./daoNFT/dataStorage.sol" ./build
-
-node ./node_modules/sol-merger/dist/bin/sol-merger.js "./daoNFT/soulBoundMedal.sol" ./build
-
+## [`DOC`]
+[Decentralized Application interface](DAI.md)

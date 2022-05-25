@@ -19,7 +19,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     string[] private _medaluriArr;
 
     // Mapping from token ID to medal
-    mapping(uint256 => uint8) private _medalMap;
+    mapping(uint256 => uint256) private _medalMap;
 
     /**
      *  bytes32 :   address + medalIndex
@@ -28,6 +28,8 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     mapping(bytes32 => uint8) private _cliamStatus;
 
     ISoulBoundMedal.CliamRequest[] private _cliamRequestList;
+
+    mapping(uint256 => uint256[]) private _cliamRequestListApprovedIndex; // key:medalIndex, value:index in _cliamRequestList
 
     ISoulBoundMedal.MedalPanel[] private _medalPanel;
 
@@ -119,6 +121,14 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     }
 
     /**
+     * @dev get medals count
+     * @return uint256
+     */
+    function countMedals() public view override returns (uint256) {
+        return _medalnameArr.length;
+    }
+
+    /**
      * @dev get medals
      * @return array of medals
      */
@@ -142,7 +152,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         public
         view
         override
-        returns (uint8)
+        returns (uint256)
     {
         return _medalMap[tokenid];
     }
@@ -171,6 +181,34 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     {
         require(_index < _cliamRequestList.length);
         return _cliamRequestList[_index];
+    }
+
+    /**
+     * @dev get Cliam Request Approved count
+     * @param _medalIndex medal index
+     * @return uint256
+     */
+    function countCliamRequestApproved(uint256 _medalIndex)
+        public
+        view
+        override
+        returns (uint256)
+    {
+        return _cliamRequestListApprovedIndex[_medalIndex].length;
+    }
+
+    /**
+     * @dev get Cliam Request Approved index by medal index
+     * @param _medalIndex medal index
+     * @return uint256[] CliamRequest index arrary of Cliam Request Approved
+     */
+    function listCliamRequestApproved(uint256 _medalIndex)
+        public
+        view
+        override
+        returns (uint256[] memory)
+    {
+        return _cliamRequestListApprovedIndex[_medalIndex];
     }
 
     /**
@@ -206,9 +244,12 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         require(cliamStatus == 1);
         _cliamStatus[k] = 2;
         _cliamRequestList[cliamId]._status = 2;
+        _cliamRequestListApprovedIndex[request._medalIndex].push(cliamId);
         unchecked {
             _medalPanel[request._medalIndex]._approved++;
+            _medalPanel[request._medalIndex]._request--;
         }
+
         _tokenIdCounter.increment();
         uint256 tokenId = _tokenIdCounter.current();
         _medalMap[tokenId] = request._medalIndex;
@@ -240,6 +281,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         _cliamRequestList[cliamId]._status = 0;
         unchecked {
             _medalPanel[request._medalIndex]._rejected++;
+            _medalPanel[request._medalIndex]._request--;
         }
     }
 
@@ -247,8 +289,9 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
      * @dev Users apply for mint medal
      * @param medalIndex the index of the medal
      */
-    function cliamRequest(uint8 medalIndex) public override {
+    function cliamRequest(uint256 medalIndex) public override {
         require(medalIndex < _medalnameArr.length);
+        require(msg.sender.code.length == 0, "contract address not supported");
         bytes32 k = keccak256(abi.encodePacked(msg.sender, medalIndex));
         uint8 cliamStatus = _cliamStatus[k];
         if (cliamStatus != 2) {
@@ -261,6 +304,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
                     1
                 )
             );
+
             unchecked {
                 _medalPanel[medalIndex]._request++;
             }
@@ -270,8 +314,6 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
             revert("already approved");
         }
     }
-
-    function _cliamRequest(bytes32 k, uint8 medalIndex) private {}
 
     /**
      * @dev  RFC 3986 compliant URL:base64://{json encoded with base64}
