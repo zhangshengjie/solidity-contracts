@@ -1,75 +1,398 @@
 # Decentralized Application interface
-soulBoundMedal.sol 为DAO合约
-soulBoundBridge.sol 为桥接工具
 
-当前 soulBoundBridge.sol 的部署地址为：https://mumbai.polygonscan.com/address/0xabc1f5943425d1a1d14f1985cc351d00b655c6f2#code
-当前 soulBoundMedal.sol 的部署地址为：https://mumbai.polygonscan.com/address/0xc49f649b69494205f9765757ee7260284d91ff3d#code
+soulBoundMedal.sol 为SoulBound DAO合约
+soulBoundBridge.sol 为 DAO 之间的桥接工具
 
-- 部署soulBoundMedal.sol时需要提供以下构造参数：
-string memory _name,  NFT名字 部署后无法修改
-string memory _symbol, NFT代号 部署后无法修改
-string[] memory _medalname, 勋章名字数组
-string[] memory _medaluri, 勋章图片url数组
-address _daoBridgeAddress 桥接工具地址【固定地址】
+# soulBoundMedal.sol
 
-- 更新一个勋章：
-soulBoundMedal ->  function updateMedal( uint256 medalIndex, string calldata name, string calldata uri )其中medalIndex为勋章的索引
-
-- 批量添加勋章：
-soulBoundMedal -> function addMedals( string[] calldata medalsname, string[] calldata medalsuri ) 
-
-- 请求勋章：
-soulBoundMedal ->  function cliamRequest(uint8 medalIndex) ，其中medalIndex为勋章的索引
-
-
-- 拒绝勋章请求：
-soulBoundMedal ->  function cliamRejected(uint256 cliamId) ，其中cliamId为请求勋章索引
-
-- 同意勋章请求：
-soulBoundMedal ->  function cliamApproved(uint256 cliamId) ，其中cliamId为请求勋章索引
-
-- 获取一个DAO合约的勋章以及发放统计 返回json
-soulBoundBridge -> function listMedals( address _address, uint256 offset, uint256 limit ) _address为一个DAO合约的地址
-
-- 获取一个DAO合约的勋章的请求记录总数
-soulBoundBridge -> function countCliamRequest(address _dao) _dao为一个DAO合约的地址
-
-- 根据请求索引获取一个DAO合约的勋章的请求详细记录，其中返回结构体中的转态码：0: rejected , 1: pending, 2: approved
-soulBoundBridge -> function getCliamRequest(address _dao, uint256 _index)  _dao为一个DAO合约的地址
-
-- 公开一个DAO（一个DAO合约只要有人请求过获取勋章 就会自动公开，但是也可以手工公开）
-soulBoundBridge -> function register(address _address, address _dao) external _address为一个当前调用用户，_dao为一个DAO合约的地址
-
-- 获取公开的DAO总数(一个DAO合约只要有人请求过获取勋章 就会自动公开)
-soulBoundBridge -> function countDAO()
-
-- 获取全部公开的DAO列表
-soulBoundBridge -> function listDAO(uint256 offset,uint256 limit,uint256 medals_offset,uint256 medals_limit), offset+limit的最大值为公开的DAO总数，medals_offset一般为0就行，medals_limit表示获取的列表中每个DAO最大显示多少个勋章，如果为0则勋章数据返回空,但是DAO主体数据依然有
-
-- 保存DAO的各种字符串信息 - 单个保存
-soulBoundMedal -> function saveString(bytes4 k, string calldata v),其中k为key，v为value
-
-- 保存DAO的各种字符串信息 - 批量保存
-soulBoundMedal -> function saveStrings(bytes4[] calldata k, string[] calldata v),其中k为key数组，v为value数组
-
-- 保存用户的各种字符串信息 - 单个保存
-soulBoundBridge -> function saveString(bytes4 k, string calldata v),其中k为key，v为value
-
-- 保存用户的各种字符串信息 - 批量保存
-soulBoundBridge -> function saveStrings(bytes4[] calldata k, string[] calldata v),其中k为key数组，v为value数组
-
-- 单个查询一个地址保存的字符串信息
-soulBoundBridge -> function getString(address a, bytes4 k)，a为目标地址，k为key
-
-- 批量查询一个地址保存的字符串信息
-soulBoundBridge -> function getStrings(address a, bytes4[] k)，a为目标地址，k为key数组
-
-- 批量查询多个地址的多个保存的字符串
-soulBoundBridge -> function getStrings(address[] calldata a, bytes4[] calldata k) 返回一个二维数组
-
-- 查询一个用户的所有NFT记录
-soulBoundBridge -> function userDetail(address _address) _address为一个用户的地址，返回json
+```solidity
+// ################################################## 
+// ###############  constructor  ####################   
+// ##################################################  
+constructor(
+          string memory _name,// NFT Collection Name | NFT集合名称
+          string memory _symbol, // NFT Collection Symbol | NFT集合代号
+          string[] memory _medalname, // Medal Name Arrary , length must be equal to _medaluri | 勋章名称数组，长度必须与_medaluri一致
+          string[] memory _medaluri, // Medal Image Url Arrary , length must be equal to _medalname | 勋章图片url数组，长度必须与_medalname一致
+          address _daoBridgeAddress // DAO Bridge Address, used to get cliam status | DAO桥接工具地址，用于获取mint状态等
+          )
+      )
+      
+// ##################################################     
+    /**
+     * @dev save string to storage | 存储字符串
+     * @param k key | 键
+     * @param v value | 值
+     */
+    function saveString(bytes4 k, string calldata v)
 
 
+// ##################################################    
 
+   /**
+    * @dev save multiple string to storage | 存储多个字符串
+    * @param k key arrary | 键数组
+    * @param v value arrary | 值数组
+    */
+    function saveStrings(bytes4[] calldata k, string[] calldata v)
+
+// ##################################################    
+
+   /**
+     * @dev Add medals to current DAO | 添加勋章到当前DAO
+     * @param medalsname array of medal name | 勋章名称数组 
+     * @param medalsuri array of medal image url | 勋章图片url数组
+     */
+    function addMedals(
+        string[] calldata medalsname,
+        string[] calldata medalsuri
+    )
+
+
+// ##################################################    
+
+   /**
+     * @dev get medals count | 获取勋章数量
+     * @return uint256 the count of medals | 勋章数量
+     */
+    function countMedals()
+
+// ##################################################     
+
+   /**
+     * @dev get medals | 获取勋章
+     * @return array of medals | 勋章数组
+     */
+    function getMedals()
+
+// ##################################################    
+
+   /**
+     * @dev get medalIndex by tokenid | 根据 tokenid 获取勋章索引
+     * @param tokenid token id | tokenid
+     * @return uint256 the medal index | 勋章索引
+     */
+    function getMedalIndexByTokenid(uint256 tokenid)
+    
+    
+// ##################################################   
+
+    /**
+     * @dev get cliam status by key | 根据key获取mint请求状态
+     * @param key key, bytes32 : request user address + medalIndex | 键，bytes32：用户地址+勋章索引
+     * @return uint8 the cliam status, 0: rejected , 1: pending, 2: approved    | 获取mint请求状态，0：拒绝，1：待定，2：通过
+     */
+    function getCliamStatusByBytes32Key(bytes32 key)
+    
+    
+// ##################################################     
+
+	 /**
+     * @dev get size of cliam request list  | 获取mint请求列表大小
+     * @return uint256 the size of cliam request list | mint请求列表大小
+     */
+    function getCliamRequestSize()
+    
+// ##################################################    
+
+   /**
+     * @dev get cliam request item by index | 根据索引获取mint请求项
+     * @return ISoulBoundMedal.CliamRequest | 结构体
+     */
+    function getCliamRequest(uint256 _index)
+    
+    
+// ##################################################     
+
+   /**
+     * @dev get the size of cliam request approved list by medal index | 根据勋章索引获取mint请求通过列表大小
+     * @param _medalIndex medal index | 勋章索引
+     * @return uint256 the size of cliam request approved list | mint请求通过列表大小
+     */
+    function countCliamRequestApproved(uint256 _medalIndex)
+    
+    
+// ################################################## 
+
+   /**
+     * @dev get Approved CliamRequest list index arrary by medal index | 根据勋章索引获取mint请求通过列表索引数组
+     * @param _medalIndex medal index | 勋章索引
+     * @return uint256[] CliamRequest index arrary of Cliam Request Approved | mint请求通过列表索引数组
+     */
+    function listCliamRequestApproved(uint256 _medalIndex)
+    
+// ##################################################   
+
+   /**
+     * @dev update medal by medal index  | 根据勋章索引更新勋章
+     * @param medalIndex index of medal | 勋章索引
+     * @param name new name of medal | 新的勋章名称
+     * @param uri new image url of medal | 新的勋章图片url
+     */
+    function updateMedal(
+        uint256 medalIndex,
+        string calldata name,
+        string calldata uri
+    )
+    
+// ##################################################    
+
+   /**
+     * @dev  Approved cliam | 通过mint请求
+     * @param cliamId the index of the cliam request id | mint请求索引
+     * Emits a {Transfer} event. 
+     */
+    function cliamApproved(uint256 cliamId) 
+    
+// ##################################################    
+
+    /**
+     * @dev  Rejected cliam  | 拒绝mint请求
+     * @param cliamId the index of the cliam request id | mint请求索引
+     */
+    function cliamRejected(uint256 cliamId)
+    
+// ##################################################   
+
+    /**
+     * @dev Users apply for mint medal | 用户申请mint勋章
+     * @param medalIndex the index of the medal | 勋章索引
+     */
+    function cliamRequest(uint256 medalIndex)
+    
+// ##################################################  
+
+   /**
+     * @dev  RFC 3986 compliant URL:base64://{json encoded with base64} ,json {"name":"base64(medal name)","image":"base64(medal uri)"}
+     * @param tokenId  tokenid
+     * @return string  the base64 uri of the Token
+     */
+    function tokenURI(uint256 tokenId)
+    
+
+```
+
+
+
+# soulBoundBridge.sol
+```solidity
+// ##################################################   
+// #################  functional  ###################   
+// ##################################################   
+
+   /**
+     * @dev save a string to the storage | 保存字符串到存储
+     * @param k key | 键
+     */
+    function saveString(bytes4 k, string calldata v)
+    
+// ##################################################    
+
+   /**
+     * @dev get a string from the storage | 从存储中获取字符串
+     * @param a address | 地址
+     * @param k key | 键
+     * @return string memory value | 字符串
+     */
+    function getString(address a, bytes4 k)
+    
+// ##################################################    
+
+   /**
+     * @dev save multiple string to the storage | 保存多个字符串到存储
+     * @param k key array | 键数组
+     * @param v value array | 值数组
+     */
+// ##################################################    
+
+   /**
+     * @dev get multiple string from the storage | 从存储中获取多个字符串
+     * @param a address | 地址
+     * @param k key array | 键数组
+     * @return string[] memory value array | 字符串数组
+     */
+    function getStrings(address a, bytes4[] calldata k)
+    
+// ##################################################    
+
+	 /**
+     * @dev get multiple address & multiple string from the storage | 从存储中获取多个地址和多个字符串
+     * @param a key array | 键数组
+     * @param k value array | 值数组
+     * @return string[][] memory value array | 字符串数组
+     */
+    function getStrings(address[] calldata a, bytes4[] calldata k)
+    
+// ##################################################   
+
+   /**
+     * @dev  call on DAO owner change | 调用DAO所有者改变
+     * @param _dao address | DAO地址
+     */
+    function onOwnerChage(address _dao)
+    
+// ##################################################   
+
+   /**
+     * @dev  register a DAO contract | 注册DAO合约
+     * @param _address user address | 用户地址
+     * @param _dao address  DAO contract address | DAO合约地址
+     */
+    function register(address _address, address _dao) 
+    
+// ##################################################    
+
+   /**
+     * @dev  DAO contract call this function on medal minted | DAO合约调用此函数来mint勋章
+     * @param _address user address | 用户地址
+     * @param _dao address  DAO contract address | DAO合约地址
+     * @param _medalIndex uint256   medal index | 勋章索引
+     */
+    function medalMint(
+        address _address,
+        address _dao,
+        uint256 _medalIndex
+    ) 
+    
+// ##################################################   
+// ##################     DAO    ####################   
+// ##################################################   
+
+   /**
+     * @dev  count DAO | 获取全部DAO数量
+     * @return uint256 DAO count | DAO数量
+     */
+    function countDAO()
+
+// ##################################################  
+
+   /**
+     * @dev list DAO | 获取全部DAO列表
+     * @param offset uint256 query offset | 查询偏移
+     * @param limit uint256 query limit | 查询限制
+     * @param medals_offset uint256 medal offset | 勋章偏移
+     * @param medals_limit uint256 medal limit,no medals fetched if 0 | 勋章限制，如果为0则不获取勋章
+     * @return string memory  json string | json字符串
+     */
+    function listDAO(
+        uint256 offset,
+        uint256 limit,
+        uint256 medals_offset,
+        uint256 medals_limit // no medals fetched if 0
+    )
+
+// ##################################################   
+// #################  CliamRequest  #################   
+// ##################################################   
+
+   /**
+     * @dev  count CliamRequest by DAO | 获取一个DAO里的所有申请
+     * @param _dao address DAO contract address | DAO合约地址
+     * @return uint256 CliamRequest count | 申请数量
+     */
+    function countCliamRequest(address _dao) 
+
+// ################################################## 
+
+   /**
+     * @dev  count approved CliamRequest by DAO | 获取一个DAO里的所有已批准申请
+     * @param _dao address DAO contract address | DAO合约地址
+     * @return string memory  json string | json字符串
+     */
+    function countCliamRequestApproved(address _dao)
+    
+// ##################################################   
+
+   /**
+     * @dev  count Approved CliamRequest by DAO and medal index | 获取一个DAO里的某个勋章的所有已批准申请
+     * @param _dao address DAO contract address | DAO合约地址
+     * @return string memory  json string | json字符串
+     */
+    function countCliamRequestApproved(address _dao, uint256 _madalIndex)
+    
+// ##################################################   
+
+   /**
+     * @dev get CliamRequest by DAO and index | 获取一个DAO里的某个申请
+     * @param medalContract  address  medal contract address instance | 勋章合约地址实例
+     * @param _index  uint256  CliamRequest index | 申请索引
+     * @return string memory  json string | json字符串
+     */
+    function getCliamRequest(ISoulBoundMedal medalContract, uint256 _index)
+    
+// ##################################################   
+
+   /**
+     * @dev get CliamRequest list by DAO | 获取一个DAO里的所有申请
+     * @param _dao address DAO contract address | DAO合约地址
+     * @param _offset uint256 query offset | 查询偏移
+     * @param _limit uint256 query limit | 查询限制
+     * @return string memory  json string | json字符串
+     */
+    function getCliamRequest(
+        address _dao,
+        uint256 _offset,
+        uint256 _limit
+    )
+    
+// ##################################################
+
+   /**
+     * @dev get CliamRequest Approved list by DAO | 获取一个DAO里的所有已批准申请
+     * @param _dao address DAO contract address | DAO合约地址
+     * @param _offset uint256 query offset | 查询偏移
+     * @param _limit uint256 query limit | 查询限制
+     * @return string memory  json string | json字符串
+     */
+    function getCliamRequestApproved(
+        address _dao,
+        uint256 _offset, // offset of each medal
+        uint256 _limit // limit of each medal
+    )
+    
+// ##################################################   
+
+   /**
+     * @dev get CliamRequest Approved list by DAO and medal index | 获取一个DAO里的某个勋章的所有已批准申请
+     * @param _dao address DAO contract address | DAO合约地址
+     * @param _offset uint256 query offset | 查询偏移
+     * @param _limit uint256 query limit | 查询限制
+     * @param _medalIndex uint256 medal index | 勋章索引
+     * @return string memory  json string | json字符串
+     */
+    function getCliamRequestApproved(
+        address _dao,
+        uint256 _offset,
+        uint256 _limit,
+        uint256 _medalIndex
+    ) 
+    
+// ##################################################   
+// ###################  medals  #####################   
+// ##################################################  
+
+   /**
+     * @dev list medals of DAO | 获取一个DAO里的所有勋章
+     * @param offset the offset, from 0 to count - 1 | 查询偏移
+     * @param limit the limit, minimum 1 | 查询限制
+     * @return string json string of query result | json字符串
+     */
+    function listDAOMedals(
+        address _address,
+        uint256 offset,
+        uint256 limit
+    )
+    
+// ##################################################   
+// #################       user     #################   
+// ################################################## 
+
+   /**
+     * @dev get user info | 获取用户信息
+     * @param _address address user address | 用户地址
+     * @return string json string of user info | json字符串
+     */
+    function userDetail(address _address)
+
+```
 
