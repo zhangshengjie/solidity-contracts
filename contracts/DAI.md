@@ -3,7 +3,7 @@
 soulBoundMedal.sol 为SoulBound DAO合约。
 
 soulBoundBridge.sol 为 DAO 之间的桥接工具 , 
-- 当前桥接工具部署地址为：[0xdc2a0e0dadc62b6db22382cdfe4b5597d6b8652e](https://mumbai.polygonscan.com/address/0xdc2a0e0dadc62b6db22382cdfe4b5597d6b8652e#code)
+- 当前桥接工具部署地址为：[0x4702a438E2DC4Bf2F5ba4BA49027d49407157CcC](https://mumbai.polygonscan.com/address/0x4702a438e2dc4bf2f5ba4ba49027d49407157ccc#code)
 
 # soulBoundMedal.sol
 
@@ -82,7 +82,7 @@ constructor(
     /**
      * @dev get cliam status by key | 根据key获取mint请求状态
      * @param key key, bytes32 : request user address + medalIndex | 键，bytes32：用户地址+勋章索引
-     * @return uint8 the cliam status, 0: rejected , 1: pending, 2: approved    | 获取mint请求状态，0：拒绝，1：待定，2：通过
+     * @return uint8 the cliam status, 1:pending,2:rejected ,>2 tokenid    | 获取mint请求状态， 
      */
     function getCliamStatusByBytes32Key(bytes32 key)
     
@@ -235,26 +235,18 @@ constructor(
     
 // ##################################################   
 
-   /**
-     * @dev  register a DAO contract | 注册DAO合约
-     * @param _address user address | 用户地址
-     * @param _dao address  DAO contract address | DAO合约地址
-     */
-    function register(address _address, address _dao) 
-    
-// ##################################################    
 
    /**
-     * @dev  DAO contract call this function on medal minted | DAO合约调用此函数来mint勋章
-     * @param _address user address | 用户地址
-     * @param _dao address  DAO contract address | DAO合约地址
-     * @param _medalIndex uint256   medal index | 勋章索引
+    * @dev on user request a medal
+    * @param _address address of user
+    * @param _dao  address of dao
+    * @param _medalIndex tokenid of medal
      */
-    function medalMint(
+    function onCliamRequest(
         address _address,
         address _dao,
         uint256 _medalIndex
-    ) 
+    ) external;
     
 // ##################################################   
 // ##################     DAO    ####################   
