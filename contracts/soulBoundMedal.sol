@@ -9,6 +9,7 @@ import "@openzeppelin/contracts/utils/Base64.sol";
 import "./ISoulBoundMedal.sol";
 import "./IDataStorage.sol";
 import "./ISoulBoundBridge.sol";
+import "solidity-escapestring/escapeString.sol";
 
 contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     using Counters for Counters.Counter;
@@ -255,7 +256,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         ISoulBoundMedal.CliamRequest memory request = _cliamRequestList[
             cliamId
         ];
-        require(request._status == 1, "cliam request is not pending");//1:pending,2:rejected ,>2 tokenid
+        require(request._status == 1, "cliam request is not pending"); //1:pending,2:rejected ,>2 tokenid
         bytes32 k = keccak256(
             abi.encodePacked(request._address, request._medalIndex)
         );
@@ -312,7 +313,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         require(msg.sender.code.length == 0, "contract address not supported");
         bytes32 k = keccak256(abi.encodePacked(msg.sender, medalIndex));
 
-        require(_cliamStatus[k] < 3, "already approved");///1:pending,2:rejected ,>2 tokenid
+        require(_cliamStatus[k] < 3, "already approved"); ///1:pending,2:rejected ,>2 tokenid
 
         _cliamStatus[k] = 1;
         _cliamRequestList.push(
@@ -332,7 +333,7 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
     }
 
     /**
-     * @dev  RFC 3986 compliant URL:base64://{json encoded with base64} ,json {"name":"base64(medal name)","image":"base64(medal uri)"}
+     * @dev  JSON data:application/json;base64,{json encoded with base64} ,json {"name":"medal name","image":"base64(medal uri)"}
      * @param tokenId  tokenid
      * @return string  the base64 uri of the Token
      */
@@ -353,15 +354,15 @@ contract SoulBoundMedal is ERC721, Ownable, ISoulBoundMedal {
         );
         string memory json = string(
             abi.encodePacked(
-                "base64://",
+                "data:application/json;base64,",
                 Base64.encode(
                     abi.encodePacked(
                         '{"owner":"',
                         Strings.toHexString(uint256(uint160(ownerOf(tokenId)))),
                         '","name":"',
-                        Base64.encode(bytes(medalName)),
+                        EscapeString.toJsonValue(medalName),
                         '","image":"',
-                        Base64.encode(bytes(medalURI)),
+                        EscapeString.toJsonValue(medalURI),
                         '"}'
                     )
                 )
